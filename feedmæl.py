@@ -3,10 +3,12 @@
 import sys
 import os.path
 import datetime
-import feedparser
+import pickle
 import smtplib
 from email.mime.text import MIMEText
 import html
+
+import feedparser
 
 
 base_dir = os.path.dirname(__file__)
@@ -35,20 +37,21 @@ def main():
         f.close()
 
     try:
-        f = open(state_file, 'r')
+        f = open(state_file, 'rb')
     except FileNotFoundError:
         state = []
     else:
-        state = [feed_state.split('&')
-                 for feed_state in f.read().strip()]
+        state = pickle.load(f)
         f.close()
 
     feed_states = {}
     for feed_state in state:
         name = feed_state[0]
         info = feed_state[1:]
-        feed_states[name] = [eval(data) for data in info]
+        feed_states[name] = info
 
+    new_state = []
+        
     for url in feeds:
         info = feed_states.get(url)
         if info is None:
@@ -67,12 +70,15 @@ def main():
         feed = feedparser.parse(url, **keyword_args)
         try:
             new_etag = feed.etag
-        except ValueError:
+        except AttributeError:
             new_etag = None
         try:
             new_modified = feed.modified
-        except ValueError:
+        except AttributeError:
             new_modified = None
+
+        new_parse = today_struct_time()
+        state.append((url, new_parse, new_etag, new_modified))
 
         entries = filter(lambda entry: entry.published_parsed > last_parse,
                          feed.entries)
@@ -81,10 +87,16 @@ def main():
             subject, body = format_entry(feed, entry)
             send_email(address, subject, body)
 
+    with open(state_file, 'wb') as f:
+        pickle.dump(state, f)
+            
     return 0
 
 def error(s):
     print(s, file=sys.stderr)
+
+def today_struct_time():
+    return datetime.datetime.now().timetuple()
 
 def yesterday_struct_time():
     return (datetime.datetime.now() - datetime.timedelta(days=1)).timetuple()
