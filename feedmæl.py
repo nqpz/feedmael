@@ -6,6 +6,7 @@ import datetime
 import feedparser
 import smtplib
 from email.mime.text import MIMEText
+import html
 
 
 base_dir = os.path.dirname(__file__)
@@ -73,8 +74,6 @@ def main():
         except ValueError:
             new_modified = None
 
-        return 0
-            
         entries = filter(lambda entry: entry.published_parsed > last_parse,
                          feed.entries)
             
@@ -91,8 +90,16 @@ def yesterday_struct_time():
     return (datetime.datetime.now() - datetime.timedelta(days=1)).timetuple()
 
 def format_entry(feed, entry):
-    subject = '[FEED] {}: {}'.format(feed.feed.title, entry.title)
-    body = '{}\n\n{}'.format(entry.summary, entry.link)
+    if feed.feed.title:
+        subject = '[FEED] {}: {}'.format(feed.feed.title,
+                                         entry.title)
+    else:
+        subject = '[FEED] {}'.format(entry.title)
+
+    summary = entry.summary
+    if entry.summary_detail.type == 'text/html':
+        summary = html.unescape(summary)
+    body = '{}\n\n{}'.format(summary, entry.link)
     return subject, body
 
 def send_email(address, subject, body):
