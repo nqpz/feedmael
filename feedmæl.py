@@ -4,7 +4,7 @@ import sys
 import os.path
 import datetime
 import feedparser
-import smptlib
+import smtplib
 from email.mime.text import MIMEText
 
 
@@ -83,6 +83,9 @@ def main():
             send_email(address, subject, body)
 
     return 0
+
+def error(s):
+    print(s, file=sys.stderr)
 
 def yesterday_struct_time():
     return (datetime.datetime.now() - datetime.timedelta(days=1)).timetuple()
