@@ -13,7 +13,8 @@ import feedparser
 
 base_dir = os.path.dirname(__file__)
 feeds_file = os.path.join(base_dir, 'feeds')
-address_file = os.path.join(base_dir, 'address')
+from_address_file = os.path.join(base_dir, 'from_address')
+to_address_file = os.path.join(base_dir, 'to_address')
 state_file = os.path.join(base_dir, '.state')
 
 
@@ -28,12 +29,21 @@ def main():
         f.close()
 
     try:
-        f = open(address_file, 'r')
+        f = open(from_address_file, 'r')
     except FileNotFoundError:
-        error('put your email address in {}'.format(repr(address_file)))
+        error('put your from email address in {}'.format(repr(from_address_file)))
         return 1
     else:
-        address = f.read().strip()
+        from_address = f.read().strip()
+        f.close()
+
+    try:
+        f = open(to_address_file, 'r')
+    except FileNotFoundError:
+        error('put your to email address in {}'.format(repr(to_address_file)))
+        return 1
+    else:
+        to_address = f.read().strip()
         f.close()
 
     try:
@@ -51,7 +61,7 @@ def main():
         feed_states[name] = info
 
     new_state = []
-        
+
     for url in feeds:
         info = feed_states.get(url)
         if info is None:
@@ -82,14 +92,14 @@ def main():
 
         entries = filter(lambda entry: entry.published_parsed > last_parse,
                          feed.entries)
-            
+
         for entry in entries:
             subject, body = format_entry(feed, entry)
-            send_email(address, subject, body)
+            send_email(from_address, to_address, subject, body)
 
     with open(state_file, 'wb') as f:
         pickle.dump(state, f)
-            
+
     return 0
 
 def error(s):
@@ -114,12 +124,12 @@ def format_entry(feed, entry):
     body = '{}\n\n{}'.format(summary, entry.link)
     return subject, body
 
-def send_email(address, subject, body):
+def send_email(from_address, to_address, subject, body):
     msg = MIMEText(body)
     msg['Subject'] = subject
-    msg['From'] = 'feedmael@hongabar.org'
-    msg['To'] = address
-    
+    msg['From'] = from_address
+    msg['To'] = to_address
+
     s = smtplib.SMTP('localhost')
     s.send_message(msg)
     s.quit()
