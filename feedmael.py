@@ -7,6 +7,7 @@ import pickle
 import smtplib
 from email.mime.text import MIMEText
 import html
+import subprocess
 
 import feedparser
 
@@ -77,7 +78,10 @@ def main():
             if last_modified is not None:
                 keyword_args['modified'] = last_modified
 
-        feed = feedparser.parse(url, **keyword_args)
+        # I had some issues with Python's built-in http(s?) support, maybe
+        # because of my system setup.  Who knows.
+        data = subprocess.check_output(['curl', '-s', url])
+        feed = feedparser.parse(data, **keyword_args)
         try:
             new_etag = feed.etag
         except AttributeError:
