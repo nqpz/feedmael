@@ -16,7 +16,7 @@ base_dir = os.path.dirname(__file__)
 feeds_file = os.path.join(base_dir, 'feeds')
 from_address_file = os.path.join(base_dir, 'from_address')
 to_address_file = os.path.join(base_dir, 'to_address')
-state_file = os.path.join(base_dir, '.state')
+state_file = os.path.join(base_dir, 'state')
 
 
 def main():
@@ -50,56 +50,33 @@ def main():
     try:
         f = open(state_file, 'rb')
     except FileNotFoundError:
-        state = []
+        state = {}
     else:
         state = pickle.load(f)
         f.close()
 
-    feed_states = {}
-    for feed_state in state:
-        name = feed_state[0]
-        info = feed_state[1:]
-        feed_states[name] = info
-
-    new_state = []
-
     for url in feeds:
-        info = feed_states.get(url)
-        if info is None:
-            last_parse = yesterday_struct_time()
-            keyword_args = {}
-        else:
-            last_parse = info[0]
-            last_etag = info[1]
-            last_modified = info[2]
-            keyword_args = {}
-            if last_etag is not None:
-                keyword_args['etag'] = last_etag
-            if last_modified is not None:
-                keyword_args['modified'] = last_modified
-
-        # I had some issues with Python's built-in http(s?) support, maybe
-        # because of my system setup.  Who knows.
+        print('feed:', url)
+        last_parse = state.get(url) or yesterday_struct_time()
+        print('last parse:', last_parse)
         data = subprocess.check_output(['curl', '-s', url])
-        feed = feedparser.parse(data, **keyword_args)
-        try:
-            new_etag = feed.etag
-        except AttributeError:
-            new_etag = None
-        try:
-            new_modified = feed.modified
-        except AttributeError:
-            new_modified = None
+        feed = feedparser.parse(data)
 
-        new_parse = today_struct_time()
-        state.append((url, new_parse, new_etag, new_modified))
+        new_parse = last_parse
 
-        entries = filter(lambda entry: entry.published_parsed > last_parse,
-                         feed.entries)
+        for entry in feed.entries:
+            if entry.published_parsed > last_parse:
+                if entry.published_parsed > new_parse:
+                    new_parse = entry.published_parsed
+                print('  entry:', entry)
+                print('  entry parsed:', entry.published_parsed)
+                subject, body = format_entry(feed, entry)
+                send_email(from_address, to_address, subject, body)
 
-        for entry in entries:
-            subject, body = format_entry(feed, entry)
-            send_email(from_address, to_address, subject, body)
+        print('new parse:', new_parse)
+        state[url] = new_parse
+
+        print('')
 
     with open(state_file, 'wb') as f:
         pickle.dump(state, f)
@@ -108,9 +85,6 @@ def main():
 
 def error(s):
     print(s, file=sys.stderr)
-
-def today_struct_time():
-    return datetime.datetime.now().timetuple()
 
 def yesterday_struct_time():
     return (datetime.datetime.now() - datetime.timedelta(days=1)).timetuple()

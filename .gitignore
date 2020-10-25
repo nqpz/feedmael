@@ -1,5 +1,5 @@
 /feeds
 /from_address
 /to_address
-/.state
+/state
 /__pycache__
