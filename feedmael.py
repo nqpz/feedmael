@@ -13,40 +13,12 @@ import feedparser
 
 
 base_dir = os.path.dirname(__file__)
-feeds_file = os.path.join(base_dir, 'feeds')
-from_address_file = os.path.join(base_dir, 'from_address')
-to_address_file = os.path.join(base_dir, 'to_address')
-state_file = os.path.join(base_dir, 'state')
-
+state_file = sys.argv[1]
+from_address = sys.argv[2]
+to_address = sys.argv[3]
+feeds = sys.argv[4:]
 
 def main():
-    try:
-        f = open(feeds_file, 'r')
-    except FileNotFoundError:
-        error('put line-separated feed urls in {}'.format(repr(feeds_file)))
-        return 1
-    else:
-        feeds = f.read().strip().split('\n')
-        f.close()
-
-    try:
-        f = open(from_address_file, 'r')
-    except FileNotFoundError:
-        error('put your from email address in {}'.format(repr(from_address_file)))
-        return 1
-    else:
-        from_address = f.read().strip()
-        f.close()
-
-    try:
-        f = open(to_address_file, 'r')
-    except FileNotFoundError:
-        error('put your to email address in {}'.format(repr(to_address_file)))
-        return 1
-    else:
-        to_address = f.read().strip()
-        f.close()
-
     try:
         f = open(state_file, 'rb')
     except FileNotFoundError:

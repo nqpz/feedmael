@@ -2,4 +2,4 @@
 
 Send emails when RSS and Atom feeds update.
 
-Put the script in cron.
+Schedule the script to run once in a while.
