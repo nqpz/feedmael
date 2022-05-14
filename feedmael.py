@@ -68,9 +68,12 @@ def format_entry(feed, entry):
     else:
         subject = '[FEED] {}'.format(entry.title)
 
-    summary = entry.summary
-    if entry.summary_detail.type == 'text/html':
-        summary = html.unescape(summary)
+    try:
+        summary = entry.summary
+        if entry.summary_detail.type == 'text/html':
+            summary = html.unescape(summary)
+    except AttributeError:
+        summary = ''
     body = '{}\n\n{}'.format(summary, entry.link)
     return subject, body
 
